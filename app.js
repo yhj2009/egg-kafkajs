@@ -60,7 +60,7 @@ module.exports = app => {
 
       // how to recover from OutOfRangeOffset error (where save offset is past server retention) accepts same value as fromOffset
       outOfRangeOffset: 'earliest', // default
-      migrateHLC: false,    // for details please see Migration section below
+      migrateHLC: false, // for details please see Migration section below
       migrateRolling: true,
       encoding: 'buffer', //trans binary data
       keyEncoding: 'utf8'
@@ -72,12 +72,12 @@ module.exports = app => {
       heartEvent.emit(`${options.groupId}.consumerConnected`);
     });
 
-    app.beforeStart(function* () {
+    app.beforeStart(function*() {
       yield heartEvent.await(`${options.groupId}.consumerConnected`);
       app.coreLogger.info('[egg-kafkajs] consumer: %s is ready', options.groupId);
     });
-    app.beforeClose(function* () {
-      consumer.close(true, function (error) {
+    app.beforeClose(function*() {
+      consumer.close(true, function(error) {
         app.coreLogger.info('[egg-kafkajs] consumer: %s is closed', options.groupId);
       });
     });
@@ -96,14 +96,17 @@ module.exports = app => {
       }
     }
 
-    consumer.on('message', function (message) {
+    consumer.on('message', function(message) {
       let { topic, key } = message;
-      const filepath = path.join(app.config.baseDir, `app/kafka/${topic}/` + key +  '_consumer.js');
-
+      const filepath = path.join(app.config.baseDir, `app/kafka/${topic}/` + key + '_consumer.js');
+      let Subscriber = null;
       if (!fs.existsSync(filepath)) {
-        app.coreLogger.warn('[egg-kafkajs] CANNOT find the subscription logic in file:`%s` for topic=%s & key=%s', filepath, topic, key);
+        // app.coreLogger.warn('[egg-kafkajs] CANNOT find the subscription logic in file:`%s` for topic=%s & key=%s', filepath, topic, key);
+        Subscriber = topic2Subscription.get(`${topic}:default`);
+      } else {
+        Subscriber = topic2Subscription.get(`${topic}:${key}`);
       }
-      const Subscriber = topic2Subscription.get(`${topic}:${key}`);
+
       if (Subscriber) {
         const ctx = app.createAnonymousContext();
         const subscriber = new Subscriber(ctx);
@@ -113,14 +116,14 @@ module.exports = app => {
   }
 
   const ProducerPrototype = new Producer(kafkaClient);
-  const  producer = Promise.promisifyAll(ProducerPrototype);
+  const producer = Promise.promisifyAll(ProducerPrototype);
 
   producer.onAsync('ready').then(function() {
     heartEvent.emit('producerConnected');
-  });  
+  });
   producer.onAsync('error', errorHandler);
 
-  app.beforeStart(function* () {
+  app.beforeStart(function*() {
     app.coreLogger.info('[egg-kafkajs] starting...');
     yield heartEvent.await('producerConnected');
     app.coreLogger.info('[egg-kafkajs] producer: %s is ready', 'producer');
