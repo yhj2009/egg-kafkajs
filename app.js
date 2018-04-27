@@ -49,6 +49,9 @@ module.exports = app => {
       // batch: undefined, // put client batch settings if you need them (see Client)
       // ssl: true, // optional (defaults to false) or tls options hash
       groupId: options.groupId,
+      autoCommit: true,
+      autoCommitMsgCount: 100,
+      autoCommitIntervalMs: 10000,
       sessionTimeout: 15000,
       // An array of partition assignment protocols ordered by preference.
       // 'roundrobin' or 'range' string for built ins (see below to pass in custom assignment protocol)
